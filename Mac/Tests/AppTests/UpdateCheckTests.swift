@@ -32,8 +32,8 @@ final class UpdateCheckTests: AppHostTestCase {
                             body: String = "## What's new\\r\\n\\r\\n- Faster listing of large archives\\r\\n- Fixed the Finder menu on macOS 26\\r\\n") -> Data {
         """
         {
-          "url": "https://api.github.com/repos/yrambler2001/7zip-macos/releases/1",
-          "html_url": "https://github.com/yrambler2001/7zip-macos/releases/tag/\(tag)",
+          "url": "https://api.github.com/repos/elliotttate/7zip-mac/releases/1",
+          "html_url": "https://github.com/elliotttate/7zip-mac/releases/tag/\(tag)",
           "id": 1,
           "author": { "login": "yrambler2001", "id": 2, "type": "User" },
           "tag_name": "\(tag)",
@@ -44,7 +44,7 @@ final class UpdateCheckTests: AppHostTestCase {
           "created_at": "2026-11-01T10:00:00Z",
           "published_at": "2026-11-01T10:05:00Z",
           "assets": [ { "name": "7-Zip-26.04-macOS-1.2.0.dmg", "size": 9000000,
-                        "browser_download_url": "https://github.com/yrambler2001/7zip-macos/releases/download/\(tag)/7-Zip-26.04-macOS-1.2.0.dmg" } ],
+                        "browser_download_url": "https://github.com/elliotttate/7zip-mac/releases/download/\(tag)/7-Zip-26.04-macOS-1.2.0.dmg" } ],
           "tarball_url": null,
           "body": "\(body)"
         }
@@ -125,7 +125,7 @@ final class UpdateCheckTests: AppHostTestCase {
         let release = try ReleaseInfo.parse(Self.releaseJSON())
         XCTAssertEqual(release.tagName, "v1.2.0")
         XCTAssertEqual(release.name, "7-Zip 26.04 for macOS 1.2.0")
-        XCTAssertEqual(release.htmlURL, URL(string: "https://github.com/yrambler2001/7zip-macos/releases/tag/v1.2.0"))
+        XCTAssertEqual(release.htmlURL, URL(string: "https://github.com/elliotttate/7zip-mac/releases/tag/v1.2.0"))
         XCTAssertFalse(release.draft)
         XCTAssertFalse(release.prerelease)
         XCTAssertEqual(release.version, SemVer("1.2.0"))
@@ -224,7 +224,7 @@ final class UpdateCheckTests: AppHostTestCase {
 
     func testRequestHeaders() {
         let request = URLSessionUpdateFetcher().makeRequest()
-        XCTAssertEqual(request.url, URL(string: "https://api.github.com/repos/yrambler2001/7zip-macos/releases/latest"))
+        XCTAssertEqual(request.url, URL(string: "https://api.github.com/repos/elliotttate/7zip-mac/releases/latest"))
         XCTAssertEqual(request.httpMethod, "GET")
         XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/vnd.github+json")
         XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "7-Zip-for-macOS/\(PortVersion.port)")
@@ -322,7 +322,7 @@ final class UpdateCheckTests: AppHostTestCase {
         shown = nil
         UpdateCheck.check(manual: true)
         XCTAssertTrue(wait(for: "the second box", timeout: 10) { shown?.result != nil })
-        XCTAssertEqual(opened, [URL(string: "https://github.com/yrambler2001/7zip-macos/releases/tag/v9.1.0")!])
+        XCTAssertEqual(opened, [URL(string: "https://github.com/elliotttate/7zip-mac/releases/tag/v9.1.0")!])
 
         // 3. Later: nothing
         shown = nil

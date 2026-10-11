@@ -5,12 +5,15 @@ import Cocoa
 import SevenZipKit
 
 final class MainWindowController: NSWindowController, NSWindowDelegate, NSSplitViewDelegate,
-                                 NSMenuItemValidation, NSUserInterfaceValidations, PanelDelegate {
+                                 NSMenuItemValidation, NSUserInterfaceValidations, PanelDelegate, NSToolbarDelegate {
 
     private let splitView = PanelSplitView()
-    /// The 7zFM toolbar strip (FMToolbar.swift): a flat Windows-style bar at the top of the
-    /// content, not an NSToolbar, so macOS draws no glass capsules around the buttons (winmatch).
+    /// Command descriptors retained for the existing test/probe API. The visible toolbar is
+    /// an NSToolbar in the window title bar; AppKit owns its materials, overflow and accessibility.
     let toolbarView = FMToolbarView()
+    private let sidebar = MacSidebar()
+    private var sidebarWidth: NSLayoutConstraint?
+    private var showsSidebar = true
     /// index 0 always exists; 1 is created on demand (SwitchOnOffOnePanel).
     private(set) var panels: [PanelViewController] = []
     private(set) var numPanels = 1
@@ -64,7 +67,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSSplitV
                               backing: .buffered, defer: false)
         window.title = "7-Zip"
         window.minSize = NSSize(width: 360, height: 240)
-        window.backgroundColor = WinChrome.face          // COLOR_BTNFACE (recheck §2)
+        window.backgroundColor = .windowBackgroundColor
+        window.toolbarStyle = .unified
         window.tabbingMode = .disallowed
         // The controller owns the window; with several windows opening and closing
         // (`MainWindows`), AppKit's extra release on close would free it under the controller.
@@ -118,17 +122,22 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSSplitV
         splitView.translatesAutoresizingMaskIntoConstraints = false
         let content = MainWindowContentView()
         content.controller = self
-        toolbarView.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(toolbarView)
+        sidebar.translatesAutoresizingMaskIntoConstraints = false
+        sidebar.onNavigate = { [weak self] path in
+            self?.focusedPanel.navigate(to: path, fallbackToRoot: false, focusListOnSuccess: true)
+        }
+        content.addSubview(sidebar)
         content.addSubview(splitView)
+        let width = sidebar.widthAnchor.constraint(equalToConstant: 186)
+        sidebarWidth = width
         NSLayoutConstraint.activate([
-            // CApp::MoveSubWindows: the toolbar across the top, the panels under it.
-            toolbarView.topAnchor.constraint(equalTo: content.topAnchor),
-            toolbarView.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            toolbarView.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            splitView.topAnchor.constraint(equalTo: toolbarView.bottomAnchor),
+            width,
+            sidebar.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            sidebar.topAnchor.constraint(equalTo: content.topAnchor),
+            sidebar.bottomAnchor.constraint(equalTo: content.bottomAnchor),
+            splitView.topAnchor.constraint(equalTo: content.topAnchor),
             splitView.bottomAnchor.constraint(equalTo: content.bottomAnchor),
-            splitView.leadingAnchor.constraint(equalTo: content.leadingAnchor),
+            splitView.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor),
             splitView.trailingAnchor.constraint(equalTo: content.trailingAnchor),
         ])
         window.contentView = content
@@ -418,7 +427,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSSplitV
     /// CApp::RefreshTitle (App.cpp:963): the focused panel's path, "7-Zip" when empty.
     private func refreshTitle() {
         let path = focusedPanel.currentPath
-        window?.title = path.isEmpty ? "7-Zip" : path
+        let name = (path.trimmingCharacters(in: CharacterSet(charactersIn: "/")) as NSString).lastPathComponent
+        window?.title = path == "/" ? "Macintosh HD" : (name.isEmpty ? "7-Zip" : name)
+        window?.subtitle = focusedPanel.snapshot?.archivePath.isEmpty == false ? "Archive · 7-Zip" : "7-Zip"
+        window?.representedURL = path.hasPrefix("/") ? URL(fileURLWithPath: path) : nil
+        sidebar.select(path: path)
+        window?.toolbar?.validateVisibleItems()
     }
 
     // MARK: PanelDelegate
@@ -523,15 +537,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSSplitV
                                  image: toolbarBitmap(id, large: large), action: action)
     }
 
-    /// The toolbar bitmap for an item: IDB_ADD 100 ... IDB_INFO 106 (48x36) or IDB_ADD2 150 ...
-    /// IDB_INFO2 156 (24x24), converted from CPP/7zip/UI/FileManager/*.bmp into the asset catalog.
+    /// Original vector glyphs for IDB_ADD 100 ... IDB_INFO 106 and IDB_ADD2 150 ...
+    /// IDB_INFO2 156. Keep the resource mapping while rendering at the chosen native size.
     static func toolbarBitmap(_ id: NSToolbarItem.Identifier, large: Bool) -> NSImage? {
         let names: [NSToolbarItem.Identifier: String] = [
             .szAdd: "add", .szExtract: "extract", .szTest: "test", .szCopy: "copy",
             .szMove: "move", .szDelete: "delete", .szInfo: "info",
         ]
         guard let name = names[id] else { return nil }
-        return NSImage(named: "toolbar-\(name)-\(large ? "large" : "small")")
+        return MacSymbols.image(name, size: large ? 24 : 20)
     }
 
     /// ReloadToolbars: the archive buttons, then the standard ones, back to back; labels per
@@ -541,8 +555,78 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSSplitV
         let specs = visibleToolbarItems.compactMap { Self.toolbarSpec($0, large: large) }
         // MoveSubWindows: the toolbar takes room only while one of the two toolbars is on (01 §1.2).
         toolbarView.configure(specs, showText: (toolbarsMask & 1) != 0, large: large)
+        let toolbar = NSToolbar(identifier: "macFileManager")
+        toolbar.delegate = self
+        toolbar.allowsUserCustomization = true
+        toolbar.autosavesConfiguration = false
+        toolbar.displayMode = (toolbarsMask & 1) != 0 ? .iconAndLabel : .iconOnly
+        window?.toolbar = toolbar
         Settings.toolbarsMask = toolbarsMask
     }
+
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.szSidebar, .szBack, .szForward, .flexibleSpace] + visibleToolbarItems + [.flexibleSpace, .szView, .szPanels]
+    }
+
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.szSidebar, .szBack, .szForward, .szView, .szPanels, .flexibleSpace, .space]
+            + Self.archiveItems + Self.standardItems
+    }
+
+    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier id: NSToolbarItem.Identifier,
+                 willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        if id == .szView {
+            let item = NSMenuToolbarItem(itemIdentifier: id)
+            item.label = "View"
+            item.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "View")
+            let menu = NSMenu()
+            let modes: [(UInt32, String, Selector)] = [
+                (700, "Large Icons", #selector(PanelViewController.viewLargeIcons(_:))),
+                (701, "Small Icons", #selector(PanelViewController.viewSmallIcons(_:))),
+                (702, "List", #selector(PanelViewController.viewList(_:))),
+                (703, "Details", #selector(PanelViewController.viewDetails(_:))),
+            ]
+            for (lang, title, action) in modes { menu.addItem(withTitle: Lang.text(lang, title), action: action, keyEquivalent: "") }
+            item.menu = menu
+            return item
+        }
+        let item = NSToolbarItem(itemIdentifier: id)
+        if let spec = Self.toolbarSpec(id, large: (toolbarsMask & 2) != 0) {
+            item.label = spec.label
+            item.paletteLabel = spec.label
+            item.toolTip = spec.label
+            item.image = spec.image
+            item.action = spec.action
+            item.target = nil
+            // Commands remain available via their established responder-chain validation (01 §1.3).
+            item.autovalidates = true
+            return item
+        }
+        let (label, symbol, action): (String, String, Selector)
+        switch id {
+        case .szSidebar: (label, symbol, action) = ("Sidebar", "sidebar.left", #selector(toggleSidebar(_:)))
+        case .szBack: (label, symbol, action) = ("Back", "chevron.left", #selector(navigateBack(_:)))
+        case .szForward: (label, symbol, action) = ("Forward", "chevron.right", #selector(navigateForward(_:)))
+        case .szPanels: (label, symbol, action) = (Lang.text(732, "Two Panels"), "rectangle.split.2x1", #selector(viewTwoPanels(_:)))
+        default: return nil
+        }
+        item.label = label
+        item.paletteLabel = label
+        item.toolTip = label
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)
+        item.target = self
+        item.action = action
+        return item
+    }
+
+    @objc func toggleSidebar(_ sender: Any?) {
+        showsSidebar.toggle()
+        updateSidebarVisibility()
+        window?.contentView?.layoutSubtreeIfNeeded()
+    }
+
+    @objc private func navigateBack(_ sender: Any?) { focusedPanel.goBack() }
+    @objc private func navigateForward(_ sender: Any?) { focusedPanel.goForward() }
 
     /// Tests: take the Toolbars mask from the settings again and rebuild the strip.
     func resetToolbarsForTest() {
@@ -603,7 +687,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate, NSSplitV
     }
 
     func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
-        windowActionIsEnabled(item.action)
+        if item.action == #selector(navigateBack(_:)) { return focusedPanel.canGoBack }
+        if item.action == #selector(navigateForward(_:)) { return focusedPanel.canGoForward }
+        return windowActionIsEnabled(item.action)
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        updateSidebarVisibility()
+    }
+
+    private func updateSidebarVisibility() {
+        let fits = (window?.contentView?.bounds.width ?? 960) >= 640
+        sidebar.isHidden = !showsSidebar || !fits
+        sidebarWidth?.constant = showsSidebar && fits ? 186 : 0
     }
 
     /// Copy To / Move To follow CFileMenu::Load (MyLoadMenu.cpp:635-672, 01 §2.1): Copy is
@@ -711,6 +807,11 @@ final class MainWindowContentView: NSView {
 }
 
 extension NSToolbarItem.Identifier {
+    static let szSidebar = NSToolbarItem.Identifier("sz.sidebar")
+    static let szBack = NSToolbarItem.Identifier("sz.back")
+    static let szForward = NSToolbarItem.Identifier("sz.forward")
+    static let szView = NSToolbarItem.Identifier("sz.view")
+    static let szPanels = NSToolbarItem.Identifier("sz.panels")
     static let szAdd = NSToolbarItem.Identifier("sz.add")
     static let szExtract = NSToolbarItem.Identifier("sz.extract")
     static let szTest = NSToolbarItem.Identifier("sz.test")
@@ -724,9 +825,9 @@ extension NSToolbarItem.Identifier {
 /// divider. 7zFM draws nothing there: the 4 px between the panels show the window's
 /// COLOR_BTNFACE (recheck §2, two-screen.png x 719-722).
 final class PanelSplitView: NSSplitView {
-    override var dividerThickness: CGFloat { 4 }
+    override var dividerThickness: CGFloat { 1 }
     override func drawDivider(in rect: NSRect) {
-        WinChrome.face.setFill()
+        NSColor.separatorColor.setFill()
         rect.fill()
     }
 }

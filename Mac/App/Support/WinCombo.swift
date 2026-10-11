@@ -182,7 +182,7 @@ final class WinComboHover: NSResponder {
 /// Folder / File).
 final class WinComboBox: NSComboBox {
     override class var cellClass: AnyClass? {
-        get { WinComboBoxCell.self }
+        get { NSComboBoxCell.self }
         set { _ = newValue }
     }
 
@@ -190,17 +190,17 @@ final class WinComboBox: NSComboBox {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        focusRingType = .none
+        focusRingType = .default
         hover.attach(to: self)
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
-        focusRingType = .none
+        focusRingType = .default
         hover.attach(to: self)
     }
 
-    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: WinCombo.height) }
+    override var intrinsicContentSize: NSSize { NSSize(width: NSView.noIntrinsicMetric, height: 26) }
 
     override func draw(_ dirtyRect: NSRect) {
         cell?.draw(withFrame: bounds, in: self)

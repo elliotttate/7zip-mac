@@ -1,5 +1,6 @@
 7-Zip for macOS (unofficial port)
 Copyright (C) 2026 Yurii Synyshyn (yrambler2001)
+Native macOS design revision Copyright (C) 2026 Brian Tate
 
 This product includes 7-Zip
 Copyright (C) 1999-2026 Igor Pavlov
@@ -42,13 +43,15 @@ respective translators:
 
 Icons
 -----
-The app icon, the document icons and the toolbar images are converted from the original 7-Zip
-icon and bitmap files in the upstream source tree: CPP/7zip/Archive/Icons/*.ico and
-CPP/7zip/UI/FileManager/*.ico (by Mac/scripts/make-icons.sh), and the toolbar bitmaps
-CPP/7zip/UI/FileManager/*.bmp.
+The native app, archive document, folder, and toolbar artwork is original and dedicated
+under CC0 1.0 Universal; see Mac/Resources/Icons/LICENSE.md. System sidebar symbols
+are supplied by macOS at runtime and are not redistributed. Retained upstream icon
+and bitmap resources keep their original licenses.
 
 AI assistance
 -------------
 Much of the macOS port was written with AI assistance (Claude Code, by Anthropic) under the
 direction of the maintainer. Commits written by an AI agent carry Co-Authored-By and
 Claude-Session trailers; the working files of that process are kept in ai/.
+
+The native design revision and release preparation used Codex assistance (OpenAI).

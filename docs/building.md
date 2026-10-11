@@ -103,7 +103,7 @@ UPSTREAM_VERSION = 26.04     the 7-Zip engine (must equal MY_VERSION in C/7zVers
   disk image `7-Zip-26.04-macOS-1.2.1.dmg` and its volume name. `Mac/scripts/version.sh` prints
   each form.
 - Releases are tagged `v<PORT_VERSION>` (`v1.2.1`) at
-  <https://github.com/yrambler2001/7zip-macos/releases>; the app's update check compares that tag
+  <https://github.com/elliotttate/7zip-mac/releases>; the app's update check compares that tag
   with its own version.
 
 To release a new version:

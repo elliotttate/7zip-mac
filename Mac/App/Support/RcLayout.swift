@@ -88,7 +88,7 @@ enum DLU {
     static func x(_ v: Int) -> CGFloat {
         scaleX == 1 ? CGFloat(mulDiv(v, baseX, 4)) : (CGFloat(v * baseX) * scaleX / 4).rounded()
     }
-    static func y(_ v: Int) -> CGFloat { CGFloat(mulDiv(v, baseY, 8)) }
+    static func y(_ v: Int) -> CGFloat { (CGFloat(v * baseY) / 8 * 1.2).rounded() }
 
     /// A horizontal distance measured in Windows pixels (a hand-placed control, a column width),
     /// stretched as the template's are.
@@ -456,7 +456,7 @@ enum RcPlace {
     }
 
     /// CBS_DROPDOWNLIST: a 21 px box at the rect's top (the template height is the drop-down's).
-    static let comboHeight: CGFloat = 21
+    static let comboHeight: CGFloat = 26
 
     static func popup(_ p: NSPopUpButton, _ r: NSRect) {
         WinPopUpButtonCell.adopt(p)
@@ -588,26 +588,10 @@ final class WinPopUpButtonCell: NSPopUpButtonCell {
         return copy
     }
 
-    override func titleRect(forBounds rect: NSRect) -> NSRect {
-        NSRect(x: rect.minX + Self.textInset, y: rect.minY, width: max(0, rect.width - Self.textInset - Self.buttonWidth),
-               height: rect.height)
-    }
+    override func titleRect(forBounds rect: NSRect) -> NSRect { super.titleRect(forBounds: rect) }
 
     override func draw(withFrame cellFrame: NSRect, in controlView: NSView) {
-        let flipped = controlView.isFlipped
-        let window = controlView.window
-        let focused = window?.isKeyWindow == true && window?.firstResponder === controlView
-        let state: WinCombo.State = !isEnabled ? .disabled
-            : (hover.isInside || isHighlighted ? .hover : (focused ? .focused : .normal))
-        WinCombo.drawBox(cellFrame, flipped: flipped, editable: false, state: state, hovered: hover.isInside)
-        WinCombo.drawText(titleOfSelectedItem ?? "", in: cellFrame, flipped: flipped, font: font ?? DialogMetrics.font,
-                          color: isEnabled ? WinCombo.text : WinCombo.disabledText,
-                          maxX: cellFrame.maxX - Self.buttonWidth)
-        if focused, state != .disabled {
-            var r = cellFrame
-            if !flipped { r.origin.y = cellFrame.minY }
-            WinCombo.drawFocusRect(r)
-        }
+        super.draw(withFrame: cellFrame, in: controlView)
     }
 
     /// Gives `popup` this cell, keeping its menu, selection, target / action and state.
@@ -698,7 +682,7 @@ final class WinProgressBar: NSView {
     }
     static let frameColor = color((200, 200, 200), (90, 90, 90))
     static let trackColor = color((235, 235, 235), (50, 50, 50))
-    static let barColor = color((0, 138, 17), (0, 160, 30))
+    static let barColor = NSColor.controlAccentColor
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -715,16 +699,14 @@ final class WinProgressBar: NSView {
     override func accessibilityMaxValue() -> Any? { maxValue }
 
     override func draw(_ dirtyRect: NSRect) {
-        let b = bounds
-        Self.frameColor.setFill()
-        b.fill()
-        let inner = b.insetBy(dx: 1, dy: 1)
-        Self.trackColor.setFill()
-        inner.fill()
+        let inner = NSRect(x: 0, y: bounds.midY - 3, width: bounds.width, height: 6)
+        NSColor.quaternaryLabelColor.setFill()
+        NSBezierPath(roundedRect: inner, xRadius: 3, yRadius: 3).fill()
         let span = maxValue - minValue
         guard span > 0 else { return }
         let fraction = min(1, max(0, (doubleValue - minValue) / span))
         Self.barColor.setFill()
-        NSRect(x: inner.minX, y: inner.minY, width: (inner.width * fraction).rounded(), height: inner.height).fill()
+        let filled = NSRect(x: inner.minX, y: inner.minY, width: inner.width * fraction, height: inner.height)
+        NSBezierPath(roundedRect: filled, xRadius: 3, yRadius: 3).fill()
     }
 }

@@ -54,6 +54,7 @@ class WinHeaderCell: NSTableHeaderCell {
         cell.alignment = old.alignment
         cell.font = font
         cell.titleFont = font
+        cell.textColor = .secondaryLabelColor
         column.headerCell = cell
     }
 }

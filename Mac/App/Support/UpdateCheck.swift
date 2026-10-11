@@ -1,6 +1,6 @@
 // UpdateCheck.swift -- "is there a newer 7-Zip for macOS?", a macOS addition (pub3,
 // ai/reports/pub3.md). 7zFM has no update check; the port's releases are published on GitHub
-// (https://github.com/yrambler2001/7zip-macos/releases, tags v<port version>), and the app asks
+// (https://github.com/elliotttate/7zip-mac/releases, tags v<port version>), and the app asks
 // GitHub's public API for the latest one:
 //
 //   * at startup, File Manager launches only -- never for a 7zG-mode command from Finder (GMode),
@@ -245,8 +245,8 @@ extension Settings {
 
 enum UpdateCheck {
 
-    static let latestReleaseURL = URL(string: "https://api.github.com/repos/yrambler2001/7zip-macos/releases/latest")!
-    static let releasesPageURL = URL(string: "https://github.com/yrambler2001/7zip-macos/releases")!
+    static let latestReleaseURL = URL(string: "https://api.github.com/repos/elliotttate/7zip-mac/releases/latest")!
+    static let releasesPageURL = URL(string: "https://github.com/elliotttate/7zip-mac/releases")!
     /// At most one startup check per this interval.
     static let interval: TimeInterval = 24 * 60 * 60
     /// How long after launching the startup check waits: past `GMode.launchWindowGrace`, so a launch
@@ -446,7 +446,7 @@ enum UpdateCheck {
 
     /// The page Download opens: the release's `html_url` only when it is a page of this
     /// repository's releases on GitHub (https, host `github.com`, no credentials or port, path
-    /// `/yrambler2001/7zip-macos/releases/...` without `.` or `..` components); anything else in the
+    /// `/elliotttate/7zip-mac/releases/...` without `.` or `..` components); anything else in the
     /// response opens the releases page instead (sec113).
     static func downloadURL(for release: ReleaseInfo) -> URL {
         isTrustedReleasePage(release.htmlURL) ? release.htmlURL : releasesPageURL
@@ -458,7 +458,7 @@ enum UpdateCheck {
               components.host?.lowercased() == "github.com",
               components.user == nil, components.password == nil, components.port == nil
         else { return false }
-        let prefix = releasesPageURL.path + "/"            // /yrambler2001/7zip-macos/releases/
+        let prefix = releasesPageURL.path + "/"            // /elliotttate/7zip-mac/releases/
         let path = components.percentEncodedPath
         guard path.hasPrefix(prefix), !path.contains("%") else { return false }
         let rest = path.dropFirst(prefix.count).split(separator: "/", omittingEmptySubsequences: false)

@@ -259,7 +259,7 @@ enum Settings {
     }
 
     static var fullRow: Bool {
-        get { bool(Key.fullRow) }
+        get { bool(Key.fullRow, default: true) }
         set { setBool(newValue, Key.fullRow) }
     }
 
@@ -323,7 +323,7 @@ enum Settings {
     /// toolbar; bit31 = "never saved" (kDefaultToolbarMask = bit31 | 8 | 4 | 1).
     static var toolbarsMask: UInt32 {
         get {
-            guard hasKey(Key.toolbars) else { return 0x8000_0000 | 8 | 4 | 1 }
+            guard hasKey(Key.toolbars) else { return 0x8000_0000 | 8 | 4 }
             return UInt32(truncatingIfNeeded: integer(Key.toolbars))
         }
         set { setInteger(Int(Int32(truncatingIfNeeded: newValue)), Key.toolbars) }

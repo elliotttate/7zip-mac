@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security problems **privately** through GitHub:
-[Security ▸ Report a vulnerability](https://github.com/yrambler2001/7zip-macos/security/advisories/new)
+[Security ▸ Report a vulnerability](https://github.com/elliotttate/7zip-mac/security/advisories/new)
 (GitHub Security Advisories). Do not open a public issue for them.
 
 Include the app version (7-Zip ▸ About 7-Zip), the macOS version, what an attacker controls (an

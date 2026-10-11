@@ -180,7 +180,7 @@ final class PanelLogicTests: XCTestCase {
                                       hiddenByDefault: hidden, layout: nil)
         XCTAssertEqual(model.columns.first?.propID, .name, "kpidName comes first (NameFirst)")
         XCTAssertFalse(model.columns.contains { $0.propID == .isDir }, "kpidIsDir is skipped")
-        XCTAssertEqual(model.columns.first?.width, 160, "kpidName is 160 px wide")
+        XCTAssertEqual(model.columns.first?.width, 320, "native name column leaves room for descriptive file names")
         // GetColumnWidth: every other column 100 px, times and raw properties included
         // (fresh-default 7zFM 26.03, listfeel.md §2).
         XCTAssertTrue(model.columns.dropFirst().allSatisfy { $0.width == 100 }, "other columns are 100 px")

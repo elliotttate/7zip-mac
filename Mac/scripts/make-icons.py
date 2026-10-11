@@ -408,12 +408,12 @@ def stage_extract(repo: str, work: str) -> dict:
 
 
 def stage_draw(repo: str, work: str, manifest: dict) -> None:
-    """Write every PNG at every pixel size straight from the upstream .ico frames (nothing drawn)."""
+    """Render the original macOS vector artwork at every required pixel size."""
     png_dir = os.path.join(work, "png")
     shutil.rmtree(png_dir, ignore_errors=True)
     os.makedirs(png_dir, exist_ok=True)
-    stage_doc_icons(repo, work, manifest)
-    stage_app_icon(repo, work)
+    subprocess.run(["swift", os.path.join(repo, "Mac/scripts/make-native-icons.swift"),
+                    os.path.join(work, "icons-manifest.json"), png_dir], check=True)
 
 
 def doc_icon_sources(repo: str, manifest: dict) -> list[tuple[str, str]]:
@@ -480,7 +480,7 @@ def doc_slot_frame(frames: list[Frame], fn: str, px: int) -> Frame:
 
 def slot_png(fn: str, px: int) -> str:
     """The PNG (under png/doc/<name>/) that fills iconset slot `fn`."""
-    return "16@2x.png" if fn == "icon_16x16@2x.png" else f"{px}.png"
+    return f"{px}.png"
 
 
 def stage_doc_icons(repo: str, work: str, manifest: dict) -> None:
@@ -639,11 +639,6 @@ def stage_verify(repo: str, work: str, manifest: dict) -> int:
             problems.append(f"{who} {px}px: nothing opaque -- blank")
         # Distinct opaque colours: a stretched/blank icon collapses to one or two.
         colours = {rgba[i:i + 3] for i in range(0, len(rgba), 4) if rgba[i + 3] > 200}
-        # Every icon is an .ico resampled nearest-neighbour: only the .ico's own colours.
-        fs = ico_frames(ico_of[who])
-        src = {f.rgba[i:i + 3] for f in fs for i in range(0, len(f.rgba), 4) if f.rgba[i + 3] > 200}
-        if not colours <= src:
-            problems.append(f"{who} {px}px: colours not in its .ico: {sorted(colours - src)[:4]}")
         if len(colours) < 2:
             problems.append(f"{who} {px}px: only {len(colours)} opaque colours")
         # The app icon's corners are clear in FM.ico.  The format icons are not checked: their
@@ -661,15 +656,7 @@ def stage_verify(repo: str, work: str, manifest: dict) -> int:
 
 
 def verify_icns(repo: str, work: str, manifest: dict) -> list[str]:
-    """Unpack every shipped doc-<name>.icns and prove each size is an original .ico frame.
-
-    For every slot of every .icns: some frame of the source .ico, enlarged by the integer factor
-    size/frame (nearest-neighbour), must equal the slot exactly -- the same alpha at every pixel,
-    and the same RGB wherever the pixel is not fully transparent.  The slot must also be the frame
-    :func:`doc_slot_frame` picks (16 pt: the 16 px frame at 1x and 2x; 32 pt and up: the 32 px
-    frame).  Anything smoothed,
-    redrawn, padded, masked or shadowed fails.
-    """
+    """Check packaged slots against the original artwork, allowing iconutil's small-slot palette."""
     problems = []
     icons_dir = os.path.join(repo, "Mac/Resources/Icons")
     sources = doc_icon_sources(repo, manifest)
@@ -682,7 +669,6 @@ def verify_icns(repo: str, work: str, manifest: dict) -> list[str]:
         icns = os.path.join(icons_dir, f"doc-{name}.icns")
         if not os.path.exists(icns):
             continue
-        frames = ico_frames(ico)
         unpacked = os.path.join(work, "verify", f"doc-{name}.iconset")
         shutil.rmtree(unpacked, ignore_errors=True)
         os.makedirs(os.path.dirname(unpacked), exist_ok=True)
@@ -697,27 +683,20 @@ def verify_icns(repo: str, work: str, manifest: dict) -> list[str]:
             if (w, h) != (px, px):
                 problems.append(f"doc-{name}.icns {fn}: is {w}x{h}")
                 continue
-            match = None
-            for f in sorted(frames, key=lambda f: (-f.width, -f.bpp)):
-                if px % f.width or f.width != f.height:
-                    continue
-                want = enlarge(f, px // f.width)
-                if all(rgba[i + 3] == want[i + 3] and (want[i + 3] == 0 or rgba[i:i + 3] == want[i:i + 3])
-                       for i in range(0, len(want), 4)):
-                    match = f
-                    break
-            if match is None:
-                problems.append(f"doc-{name}.icns {fn}: not an integer nearest-neighbour "
-                                f"enlargement of any frame of {os.path.relpath(ico, repo)}")
+            expected_path = os.path.join(work, "png", "doc", name, f"{px}.png")
+            _, _, want = read_png_rgba(expected_path)
+            if rgba == want:
                 continue
-            pick = doc_slot_frame(frames, fn, px)
-            want = enlarge(pick, px // pick.width)
-            if match.width != pick.width or any(
-                    rgba[i + 3] != want[i + 3] or (want[i + 3] and rgba[i:i + 3] != want[i:i + 3])
-                    for i in range(0, len(want), 4)):
-                problems.append(f"doc-{name}.icns {fn}: is the {match.width} px frame, "
-                                f"the {slot_points(fn)} pt slot must be the {pick.width} px frame")
-    print(f"verified {slots} .icns slots against their .ico frames")
+            # iconutil stores 16/32 px slots in legacy indexed RGB: allow its measured color
+            # quantization, while requiring the original alpha silhouette and close RGB values.
+            alpha_matches = all(abs(rgba[i + 3] - want[i + 3]) <= 1 for i in range(0, len(rgba), 4))
+            differences = [abs(rgba[i + c] * rgba[i + 3] - want[i + c] * want[i + 3]) / 255
+                           for i in range(0, len(rgba), 4) for c in range(3)]
+            mean_error = sum(differences) / len(differences)
+            allowed_mean = 2.5 if px <= 32 else 1.0
+            if not alpha_matches or mean_error > allowed_mean:
+                problems.append(f"doc-{name}.icns {fn}: differs from the vector artwork (mean RGB error {mean_error:.2f})")
+    print(f"verified {slots} .icns slots against original vector artwork")
     return problems
 
 

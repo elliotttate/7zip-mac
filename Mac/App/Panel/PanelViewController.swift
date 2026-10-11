@@ -213,7 +213,7 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
         tableView.allowsMultipleSelection = !alternativeSelection
         tableView.allowsColumnReordering = true
         tableView.allowsColumnResizing = true
-        tableView.usesAlternatingRowBackgroundColors = false
+        tableView.usesAlternatingRowBackgroundColors = true
         tableView.gridStyleMask = Settings.showGrid ? [.solidHorizontalGridLineMask, .solidVerticalGridLineMask] : []
         tableView.gridColor = PanelSelectionStyle.grid               // LVS_EX_GRIDLINES (240,240,240)
         // 7zFM 26.03's list: 19 px rows with no gap, the cells draw their own margins, a 24 px
@@ -221,7 +221,7 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
         tableView.rowHeight = PanelMetrics.rowHeight
         tableView.intercellSpacing = .zero
         tableView.style = .plain
-        tableView.columnAutoresizingStyle = .noColumnAutoresizing
+        tableView.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         tableView.target = self
         tableView.doubleAction = #selector(doubleClicked(_:))
         tableView.action = #selector(singleClicked(_:))
@@ -248,8 +248,8 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
         // status bar (each panel owns one, 01 §1.2), as msctls_statusbar32 draws it on Windows 11
         // (recheck §2): 23 px with a 1 px (215) line on top, COLOR_BTNFACE, the GUI font in black,
         // a part's text 2 px in, 1 px (215) dividers at a part's right edge - 1 on rows 2..21.
-        statusLabel.font = PanelMetrics.listFont
-        statusLabel.textColor = WinChrome.text
+        statusLabel.font = NSFont.systemFont(ofSize: 11)
+        statusLabel.textColor = .secondaryLabelColor
         statusLabel.lineBreakMode = .byTruncatingMiddle
         Bidi.makeLeftToRight(statusLabel)
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -259,33 +259,26 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
         status.addSubview(statusLabel)
         // 01 §1.2 "Status bar": four parts with fixed right edges, a divider after each of the
         // first three; the last one takes the rest.
-        let textBaseline: CGFloat = 16       // ink rows 7..15 under the line: baseline 16 px down
+        let textBaseline: CGFloat = 19
         var statusConstraints: [NSLayoutConstraint] = []
         for (i, label) in statusSections.enumerated() {
             label.font = statusLabel.font
-            label.textColor = WinChrome.text
+            label.textColor = .secondaryLabelColor
             label.lineBreakMode = .byTruncatingTail
-            Bidi.makeLeftToRight(label)
+            label.alignment = .right
             label.translatesAutoresizingMaskIntoConstraints = false
+            label.isHidden = i > 0
             status.addSubview(label)
-            let left = Self.statusSectionEdges[i]
-            statusConstraints.append(label.leadingAnchor.constraint(equalTo: status.leadingAnchor, constant: left + 1))
-            statusConstraints.append(label.firstBaselineAnchor.constraint(equalTo: status.topAnchor, constant: textBaseline))
-            if i + 1 < statusSections.count {
-                statusConstraints.append(label.widthAnchor.constraint(lessThanOrEqualToConstant:
-                    Self.statusSectionEdges[i + 1] - left - 2))
-            } else {
-                statusConstraints.append(label.trailingAnchor.constraint(lessThanOrEqualTo: status.trailingAnchor, constant: -2))
+            if i == 0 {
+                statusConstraints += [
+                    label.trailingAnchor.constraint(equalTo: status.trailingAnchor, constant: -12),
+                    label.firstBaselineAnchor.constraint(equalTo: status.topAnchor, constant: textBaseline),
+                    label.widthAnchor.constraint(lessThanOrEqualToConstant: 120),
+                ]
             }
-            let divider = PanelColorView(WinChrome.statusLine)
-            status.addSubview(divider)
+            let divider = PanelColorView(.clear)
+            divider.isHidden = true
             statusDividers.append(divider)
-            statusConstraints += [
-                divider.leadingAnchor.constraint(equalTo: status.leadingAnchor, constant: left - 1),
-                divider.widthAnchor.constraint(equalToConstant: 1),
-                divider.topAnchor.constraint(equalTo: status.topAnchor, constant: 1),
-                divider.heightAnchor.constraint(equalToConstant: 20),
-            ]
         }
 
         let statusLine = PanelColorView(WinChrome.statusLine)
@@ -308,9 +301,9 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
             upButton.widthAnchor.constraint(equalToConstant: WinChrome.upButtonRect.width),
             upButton.heightAnchor.constraint(equalToConstant: WinChrome.upButtonRect.height),
             pathCombo.leadingAnchor.constraint(equalTo: pathBar.leadingAnchor, constant: WinChrome.comboX),
-            pathCombo.trailingAnchor.constraint(equalTo: pathBar.trailingAnchor),
-            pathCombo.topAnchor.constraint(equalTo: pathBar.topAnchor),
-            pathCombo.heightAnchor.constraint(equalToConstant: WinChrome.bandHeight),
+            pathCombo.trailingAnchor.constraint(equalTo: pathBar.trailingAnchor, constant: -12),
+            pathCombo.centerYAnchor.constraint(equalTo: pathBar.centerYAnchor),
+            pathCombo.heightAnchor.constraint(equalToConstant: 30),
             listFrame.topAnchor.constraint(equalTo: pathBar.bottomAnchor),
             listFrame.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             listFrame.trailingAnchor.constraint(equalTo: root.trailingAnchor),
@@ -797,6 +790,10 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
     /// capture shows a plain "Name" header). The port used to show the AppKit triangle.
     private func updateSortIndicator() {
         for column in tableView.tableColumns { tableView.setIndicatorImage(nil, in: column) }
+        if let column = tableView.tableColumns.first(where: { Self.propID(of: $0) == columnsModel.sortID }) {
+            let image = NSImage(named: columnsModel.ascending ? "NSAscendingSortIndicator" : "NSDescendingSortIndicator")
+            tableView.setIndicatorImage(image, in: column)
+        }
         tableView.highlightedTableColumn = nil
     }
 
@@ -1087,19 +1084,14 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
     func refreshStatusBar() {
         let total = rows.reduce(0) { $1.isParentRow ? $0 : $0 + 1 }
         let operated = operatedRowIndices().map { rows[$0] }
-        let template = Lang.get(3002, "{0} object(s) selected")   // IDS_N_SELECTED_ITEMS
-        // Part 0: "N / M object(s) selected"; part 1: the operated items' size.
-        statusLabel.stringValue = Bidi.isolate(Lang.format(template, "\(operated.count) / \(total)"))
-        statusSections[0].stringValue = operated.isEmpty
-            ? "" : Formatting.size(operated.reduce(UInt64(0)) { $0 &+ $1.size })
-        // Parts 2 and 3 only when something is selected and the focused row is not "..".
-        if !selectedIndexes.isEmpty, let focused = focusedRow(), !focused.isParentRow {
-            statusSections[1].stringValue = Formatting.size(focused.size)
-            statusSections[2].stringValue = focused.statusTime          // PanelListNotify.cpp:812
-        } else {
-            statusSections[1].stringValue = ""
-            statusSections[2].stringValue = ""
-        }
+        // Keep the detailed metadata available to accessibility and Properties, while the
+        // visible footer follows Finder's concise item / selection summary.
+        statusLabel.stringValue = "\(total) items" + (operated.isEmpty ? "" : " · \(operated.count) selected")
+        let size = operated.reduce(UInt64(0)) { $0 &+ $1.size }
+        statusSections[0].stringValue = operated.isEmpty ? "" : ByteCountFormatter.string(
+            fromByteCount: Int64(clamping: size), countStyle: .file)
+        statusSections[1].stringValue = ""
+        statusSections[2].stringValue = ""
     }
 
     /// A section that starts beyond a narrow panel's edge is not there at all (a Win32 status bar
@@ -1107,8 +1099,8 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
     override func viewDidLayout() {
         super.viewDidLayout()
         let width = view.bounds.width
-        for (i, edge) in Self.statusSectionEdges.enumerated() {
-            let hidden = edge + 12 > width
+        for i in statusSections.indices {
+            let hidden = i > 0 || width < 380
             if statusSections[i].isHidden != hidden { statusSections[i].isHidden = hidden }
             if statusDividers[i].isHidden != hidden { statusDividers[i].isHidden = hidden }
         }
@@ -1290,21 +1282,23 @@ final class PanelViewController: NSViewController, NSMenuItemValidation {
 
 /// The address band (ReBarWindow32): white, with the RBS_BANDBORDERS edge after the Up button
 /// (recheck §2). 7zFM draws nothing here for the active panel; only the keyboard focus tells.
-final class PathBarView: NSView {
+final class PathBarView: NSVisualEffectView {
     var isActive = false
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        material = .headerView
+        blendingMode = .withinWindow
+        state = .followsWindowActiveState
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
 
     override var isFlipped: Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
-        WinChrome.window.setFill()
-        bounds.fill()
-        let x = WinChrome.comboX
-        WinChrome.bandBorderShadow.setFill()
-        NSRect(x: x - 2, y: 0, width: 1, height: bounds.height).fill()
-        WinChrome.bandBorderLight.setFill()
-        NSRect(x: x - 1, y: 0, width: 1, height: bounds.height).fill()
-        WinChrome.bandBottom.setFill()
-        NSRect(x: 0, y: bounds.height - 1, width: x - 2, height: 1).fill()
+        super.draw(dirtyRect)
+        NSColor.separatorColor.withAlphaComponent(0.4).setFill()
+        NSRect(x: 0, y: bounds.height - 0.5, width: bounds.width, height: 0.5).fill()
     }
 }
 
@@ -1323,11 +1317,9 @@ final class PanelColorView: NSView {
 /// The list's themed client edge: a 1 px (130,135,144) line, then the window colour; the list
 /// sits `inset` inside (SysHeader32 @2,78 in a SysListView32 @0,76).
 final class PanelListFrameView: NSView {
-    static let inset: CGFloat = 2
+    static let inset: CGFloat = 0
     override func draw(_ dirtyRect: NSRect) {
         WinChrome.window.setFill()
         bounds.fill()
-        WinChrome.listBorder.setFill()
-        bounds.frame(withWidth: 1)
     }
 }

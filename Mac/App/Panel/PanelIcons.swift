@@ -67,7 +67,7 @@ enum PanelIcons {
             return resized(NSWorkspace.shared.icon(forFile: snapshot.archivePath), smallSize)
         }
         if snapshot.isFileSystem, !snapshot.fullPath.isEmpty {
-            return resized(NSWorkspace.shared.icon(forFile: snapshot.fullPath), smallSize)
+            return resized(Icons.folder, smallSize)
         }
         return resized(Icons.folder, smallSize)
     }

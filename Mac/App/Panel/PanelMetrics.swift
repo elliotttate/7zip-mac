@@ -28,15 +28,15 @@ import SevenZipKit
 enum PanelMetrics {
 
     /// Row pitch (LVIR_BOUNDS height).
-    static let rowHeight: CGFloat = 19
+    static let rowHeight: CGFloat = 30
     /// SysHeader32 height.
-    static let headerHeight: CGFloat = 24
+    static let headerHeight: CGFloat = 28
     /// LVIR_ICON: x and size of the small icon in the name column, and its offset from the row top.
-    static let iconX: CGFloat = 4
-    static let iconSize: CGFloat = 16
-    static let iconTop: CGFloat = 1
+    static let iconX: CGFloat = 12
+    static let iconSize: CGFloat = 20
+    static let iconTop: CGFloat = 5
     /// LVIR_LABEL: where the label (and the selection fill) starts in the name column.
-    static let labelX: CGFloat = 20
+    static let labelX: CGFloat = 40
     /// The text's origin inside the label, and the fill after the text.
     static let labelTextInset: CGFloat = 2
     static let labelTrailing: CGFloat = 6
@@ -129,7 +129,7 @@ enum PanelMetrics {
 
     /// Where a status-bar part's text field starts, from the part's left edge: its ink 2 px in, as
     /// msctls_statusbar32 draws it (recheck §2; fresh 7zFM 26.03: "0" ink at client x 2).
-    static let statusTextOrigin: CGFloat = 1
+    static let statusTextOrigin: CGFloat = 12
 
     /// macOS's window corner radius: 16 pt on macOS 26, 10 pt before (measured, fix111).
     static var windowCornerRadius: CGFloat {
@@ -210,11 +210,12 @@ extension PanelViewController {
         header.alignment = PanelFormat.alignment(for: info.varType, propID: info.propID)
         header.font = PanelMetrics.listFont                       // SysHeader32: the list's font
         header.titleFont = PanelMetrics.listFont                  // datecols: drawn in it (WinHeaderCell)
-        header.textColor = WinChrome.text                         // COLOR_WINDOWTEXT, not AppKit grey
+        header.textColor = .secondaryLabelColor
         column.headerCell = header
         column.title = info.title
         column.width = CGFloat(info.width)
-        column.minWidth = 24
+        // Keep the filename's icon and inset intact when the window is narrow.
+        column.minWidth = info.propID == .name ? 100 : 24
         column.maxWidth = 2000
         return column
     }

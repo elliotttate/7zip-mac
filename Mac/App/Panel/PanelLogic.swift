@@ -206,7 +206,7 @@ struct PanelColumn {
 
 struct PanelColumnsModel {
 
-    static let nameWidth = 160        // GetColumnWidth (PanelItems.cpp:44-51), 96 dpi px == pt here
+    static let nameWidth = 320
     static let otherWidth = 100
 
     /// Default width of a new column: GetColumnWidth (PanelItems.cpp:44-51) gives kpidName 160 px
@@ -265,6 +265,15 @@ struct PanelColumnsModel {
             PanelColumn(propID: info.propID, varType: info.varType, title: info.localizedName,
                         visible: info.propID == .name || !hiddenByDefault.contains(info.propID.rawValue),
                         width: Self.defaultWidth(for: info))
+        }
+        // A fresh macOS list starts with the useful summary columns. Every engine property
+        // remains available in the column menu, and explicit saved layouts remain authoritative.
+        if layout == nil, isFileSystem || folderType.hasPrefix("7-Zip.") {
+            let summary: Set<SZPropID> = [.name, .size, .mtime, .packSize]
+            for i in built.indices {
+                built[i].visible = built[i].isName || (summary.contains(built[i].propID)
+                    && !hiddenByDefault.contains(built[i].propID.rawValue))
+            }
         }
         // Default sort: kpidName ascending for file-system and archive folders, native order
         // (kpidNoProperty) for the root and the volumes list (PanelItems.cpp:96+).

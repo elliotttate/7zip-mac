@@ -24,24 +24,24 @@ enum WinChrome {
     /// COLOR_BTNFACE (240,240,240): the main window's client background (around the toolbar, the
     /// splitter's 4 px, the status bar) and every dialog's background. AppKit's windowBackgroundColor
     /// is white on macOS 26.
-    static let face = dynamic(gray(240), .windowBackgroundColor)
+    static let face = NSColor.windowBackgroundColor
 
     /// COLOR_WINDOW: the list, the address band and the combo's field.
-    static let window = dynamic(gray(255), .textBackgroundColor)
+    static let window = NSColor.controlBackgroundColor
 
     /// COLOR_WINDOWTEXT / COLOR_BTNTEXT (0,0,0): list, toolbar and status-bar text. AppKit's
     /// labelColor is 85 % black.
-    static let text = dynamic(gray(0), .labelColor)
+    static let text = NSColor.labelColor
 
     /// The themed WS_EX_CLIENTEDGE of the list: a 1 px (130,135,144) line, then 1 px of the
     /// window colour, so the header starts 2 px in (SysHeader32 @2,78 in a list @0,76).
-    static let listBorder = dynamic(rgb(130, 135, 144), .separatorColor)
+    static let listBorder = NSColor.separatorColor
 
     /// msctls_statusbar32: a 1 px (215,215,215) line on top and the part dividers.
-    static let statusLine = dynamic(gray(215), .separatorColor)
+    static let statusLine = NSColor.separatorColor
 
     /// The address combo's 1 px border (ComboBoxEx32, 24 px high).
-    static let comboBorder = dynamic(gray(141), .separatorColor)
+    static let comboBorder = NSColor.separatorColor.withAlphaComponent(0.35)
 
     /// The combo's drop-down chevron.
     static let comboArrow = dynamic(gray(96), .secondaryLabelColor)
@@ -55,12 +55,12 @@ enum WinChrome {
     // MARK: geometry (px = pt)
 
     /// The address band (ReBarWindow32): 24 px high.
-    static let bandHeight: CGFloat = 24
+    static let bandHeight: CGFloat = 48
     /// The Up button's toolbar (ToolbarWindow32 1002): @2,1 23 x 22 in the band.
-    static let upButtonRect = NSRect(x: 2, y: 1, width: 23, height: 22)
+    static let upButtonRect = NSRect(x: 10, y: 9, width: 30, height: 30)
     /// ComboBoxEx32 1003 starts at x 33 and runs to the band's right edge.
-    static let comboX: CGFloat = 33
+    static let comboX: CGFloat = 48
     /// The status bar: 23 px including its top line; dividers 1 px at a part's right edge - 1,
     /// rows 2..21; text ink 2 px into a part.
-    static let statusHeight: CGFloat = 23
+    static let statusHeight: CGFloat = 30
 }

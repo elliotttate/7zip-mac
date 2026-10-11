@@ -76,7 +76,7 @@ final class SettingsTests: XCTestCase {
     func testDefaultsWhenUnset() {
         XCTAssertFalse(Settings.showDots)
         XCTAssertFalse(Settings.showRealFileIcons)
-        XCTAssertFalse(Settings.fullRow)
+        XCTAssertTrue(Settings.fullRow)
         XCTAssertFalse(Settings.showGrid)
         XCTAssertFalse(Settings.singleClick)
         XCTAssertFalse(Settings.alternativeSelection)
@@ -87,7 +87,7 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(Settings.language, "")
         XCTAssertEqual(Settings.listMode(0), 3)                       // details
         XCTAssertEqual(Settings.numPanels, 1)                         // kNumDefaultPanels
-        XCTAssertEqual(Settings.toolbarsMask, 0x8000_0000 | 8 | 4 | 1) // kDefaultToolbarMask
+        XCTAssertEqual(Settings.toolbarsMask, 0x8000_0000 | 8 | 4) // Native icon-only toolbar
         XCTAssertEqual(Settings.folderShortcuts.count, 10)
         XCTAssertTrue(Settings.folderHistory.isEmpty)
 

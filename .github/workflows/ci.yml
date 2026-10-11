@@ -51,7 +51,7 @@ jobs:
         run: Mac/scripts/check-hygiene.sh
       - name: Relative Markdown links
         run: Mac/scripts/check-links.sh
-      - name: Icons are regenerated from the upstream .ico files and match what is committed
+      - name: Original vector icons regenerate to the committed artwork
         run: |
           Mac/scripts/make-icons.sh
           if ! git diff --quiet -- Mac/Resources || [ -n "$(git status --porcelain --untracked-files=all -- Mac/Resources)" ]; then

@@ -49,7 +49,7 @@ final class PanelUpButton: NSButton {
     override func draw(_ dirtyRect: NSRect) {
         let pressed = isHighlighted && isEnabled
         if isEnabled, pressed || isHovered {
-            let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 2, yRadius: 2)
+            let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 7, yRadius: 7)
             (pressed ? FMToolbarColors.pressedFill : FMToolbarColors.hoverFill).setFill()
             path.fill()
             (pressed ? FMToolbarColors.pressedBorder : FMToolbarColors.hoverBorder).setStroke()
@@ -57,7 +57,17 @@ final class PanelUpButton: NSButton {
         }
         let shift: CGFloat = pressed ? FMToolbarView.pressedOffset.width : 0
         let origin = NSPoint(x: floor((bounds.width - 16) / 2) + shift, y: floor((bounds.height - 16) / 2))
-        Self.drawIcon(at: origin, enabled: isEnabled)
+        let arrow = NSBezierPath()
+        arrow.lineWidth = 1.5
+        arrow.lineCapStyle = .round
+        arrow.lineJoinStyle = .round
+        arrow.move(to: NSPoint(x: origin.x + 3, y: origin.y + 7))
+        arrow.line(to: NSPoint(x: origin.x + 8, y: origin.y + 2))
+        arrow.line(to: NSPoint(x: origin.x + 13, y: origin.y + 7))
+        arrow.move(to: NSPoint(x: origin.x + 8, y: origin.y + 2))
+        arrow.line(to: NSPoint(x: origin.x + 8, y: origin.y + 15))
+        NSColor.labelColor.withAlphaComponent(isEnabled ? 0.8 : 0.25).setStroke()
+        arrow.stroke()
     }
 
     /// VIEW_PARENTFOLDER of comctl32's IDB_VIEW_SMALL_COLOR (Panel.cpp:447, 490-491): Windows
@@ -134,8 +144,8 @@ final class AddressComboCell: NSComboBoxCell {
 
     /// Where the text goes: 24 px from the left (the Edit 1003 at x 57 in a combo at x 33), the
     /// arrow's 18 px at the right kept clear.
-    static let textInsetLeft: CGFloat = 24
-    static let arrowWidth: CGFloat = 18
+    static let textInsetLeft: CGFloat = 32
+    static let arrowWidth: CGFloat = 24
 
     private func textRect(_ frame: NSRect) -> NSRect {
         var r = frame
@@ -159,24 +169,28 @@ final class AddressComboCell: NSComboBoxCell {
     override func titleRect(forBounds rect: NSRect) -> NSRect { textRect(rect) }
 
     override func draw(withFrame cellFrame: NSRect, in controlView: NSView) {
-        WinChrome.window.setFill()
-        cellFrame.fill()
-        WinChrome.comboBorder.setFill()
-        cellFrame.frame(withWidth: 1)
+        let field = NSBezierPath(roundedRect: cellFrame.insetBy(dx: 0.5, dy: 0.5), xRadius: 7, yRadius: 7)
+        NSColor.controlBackgroundColor.withAlphaComponent(0.65).setFill()
+        field.fill()
+        let editing = (controlView as? NSControl)?.currentEditor() != nil
+        (editing ? NSColor.keyboardFocusIndicatorColor : WinChrome.comboBorder).setStroke()
+        field.lineWidth = editing ? 1.5 : 0.5
+        field.stroke()
         if let icon {
-            let flipped = controlView.isFlipped
-            let y = flipped ? cellFrame.minY + 4 : cellFrame.maxY - 4 - 16
-            icon.draw(in: NSRect(x: cellFrame.minX + 3, y: y, width: 16, height: 16), from: .zero,
+            let y = cellFrame.midY - 8
+            icon.draw(in: NSRect(x: cellFrame.minX + 8, y: y, width: 16, height: 16), from: .zero,
                       operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         }
         // the chevron: a 1 px "v", 9 px wide, 5 px tall, centred in the last 18 px
-        let cx = cellFrame.maxX - 9.5, cy = cellFrame.midY
+        let cx = cellFrame.maxX - 12, cy = cellFrame.midY
         let path = NSBezierPath()
         let dy: CGFloat = controlView.isFlipped ? 1 : -1
         path.move(to: NSPoint(x: cx - 4, y: cy - 2 * dy))
         path.line(to: NSPoint(x: cx, y: cy + 2 * dy))
         path.line(to: NSPoint(x: cx + 4, y: cy - 2 * dy))
-        path.lineWidth = 1
+        path.lineWidth = 1.3
+        path.lineCapStyle = .round
+        path.lineJoinStyle = .round
         WinChrome.comboArrow.setStroke()
         path.stroke()
         drawInterior(withFrame: cellFrame, in: controlView)

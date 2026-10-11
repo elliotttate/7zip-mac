@@ -38,7 +38,7 @@ enum ListFontChoice {
 
     static let settingsKey = "FM.ListFont"
     static let defaultFontName = "system"
-    static let defaultSize: CGFloat = 12.2
+    static let defaultSize: CGFloat = 13
     /// The default before sffont (listfeel, feel3): Helvetica Neue 11, Segoe UI's widths.
     static let previousDefaultFontName = "HelveticaNeue"
     static let previousDefaultSize: CGFloat = 11

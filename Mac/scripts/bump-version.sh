@@ -91,7 +91,7 @@ section = (f"## [{new}] — unreleased\n\n"
            "### Added\n\n-\n\n### Changed\n\n-\n\n### Fixed\n\n-\n\n")
 m = re.search(r"^## \[", text, re.M)
 text = text[:m.start()] + section + text[m.start():] if m else text.rstrip("\n") + "\n\n" + section
-link = f"[{new}]: https://github.com/yrambler2001/7zip-macos/releases/tag/v{new}\n"
+link = f"[{new}]: https://github.com/elliotttate/7zip-mac/releases/tag/v{new}\n"
 m = re.search(r"^\[[^\]]+\]: ", text, re.M)
 text = text[:m.start()] + link + text[m.start():] if m else text.rstrip("\n") + "\n\n" + link
 open(path, "w", encoding="utf-8").write(text)

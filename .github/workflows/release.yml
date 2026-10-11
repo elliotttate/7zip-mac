@@ -1,25 +1,9 @@
-# Release: pushing a tag v<PORT_VERSION> builds, tests, packages and publishes the disk image as a
-# GitHub Release, then points the Homebrew cask at it. The whole procedure, and the one-time setup
-# of the optional secrets, is in docs/releasing.md.
-#
-#   build    verify the tag against Mac/VERSION, unit tests on arm64 and x86_64 (Rosetta),
-#            universal Release, package.sh -> 7-Zip-<upstream>-macOS-<port>.dmg + .sha256.
-#            Signs with a Developer ID, notarizes and staples only when those secrets exist;
-#            otherwise the image is ad-hoc signed, as every release is until then.
-#   release  create the GitHub Release (or refresh the assets of an existing one).
-#   tap      rewrite Casks/7zip-macos.rb in yrambler2001/homebrew-tap; only with secret TAP_TOKEN.
-#
-# Run by hand (workflow_dispatch) it is a dry run: build, test and package the selected commit,
-# upload the image as a workflow artifact, publish nothing.
-#
-# Actions are pinned by commit SHA (tag in the comment) for the reason given in ci.yml. The release
-# is created with the GitHub CLI preinstalled on the runner, so no third-party action ever sees the
-# write token. Nothing is cached here: a release is built from a clean checkout.
+# Manual release build validation. v* releases are signed, notarized, and published locally;
+# this workflow creates build artifacts and never replaces published release assets.
+# Optional signing/notarization secrets are documented in docs/releasing.md.
 name: Release
 
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
 
 # Never cancel a release half-way; a second tag waits for the first.
@@ -207,81 +191,3 @@ jobs:
             Mac/build/*.log
             Mac/build/*.xcresult
           retention-days: 14
-
-  release:
-    name: GitHub Release
-    needs: build
-    if: github.event_name == 'push' && github.ref_type == 'tag'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write   # create the release and upload its assets; nothing else
-    env:
-      GH_TOKEN: ${{ github.token }}
-      TAG: ${{ github.ref_name }}
-      TITLE: ${{ needs.build.outputs.name }}
-      DMG: ${{ needs.build.outputs.dmg }}
-      SHA256: ${{ needs.build.outputs.sha256 }}
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
-        with:
-          name: release-dmg
-          path: dist
-      - name: Check the image against its checksum
-        working-directory: dist
-        run: shasum -a 256 -c "$DMG.sha256" && [ "$(cut -d' ' -f1 "$DMG.sha256")" = "$SHA256" ]
-      - name: Create the release, or refresh its assets on a re-run
-        run: |
-          set -euo pipefail
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" "dist/$DMG" "dist/$DMG.sha256" --clobber --repo "$GITHUB_REPOSITORY"
-            gh release edit "$TAG" --title "$TITLE" --notes-file dist/release-notes.md --repo "$GITHUB_REPOSITORY"
-          else
-            gh release create "$TAG" "dist/$DMG" "dist/$DMG.sha256" --verify-tag --latest \
-              --title "$TITLE" --notes-file dist/release-notes.md --repo "$GITHUB_REPOSITORY"
-          fi
-          echo "### Released [$TITLE]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)" >>"$GITHUB_STEP_SUMMARY"
-
-  tap:
-    name: Homebrew tap
-    needs: [build, release]
-    if: github.event_name == 'push' && github.ref_type == 'tag'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      HAVE_TAP_TOKEN: ${{ secrets.TAP_TOKEN != '' }}
-      PORT: ${{ needs.build.outputs.port }}
-      UPSTREAM: ${{ needs.build.outputs.upstream }}
-      SHA256: ${{ needs.build.outputs.sha256 }}
-    steps:
-      - name: No TAP_TOKEN
-        if: env.HAVE_TAP_TOKEN != 'true'
-        run: echo "::notice::Secret TAP_TOKEN is not set; the Homebrew cask was not updated (docs/releasing.md)."
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        if: env.HAVE_TAP_TOKEN == 'true'
-        with:
-          sparse-checkout: Mac/scripts/update-cask.sh
-          sparse-checkout-cone-mode: false
-          path: src
-          persist-credentials: false
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        if: env.HAVE_TAP_TOKEN == 'true'
-        with:
-          repository: yrambler2001/homebrew-tap
-          token: ${{ secrets.TAP_TOKEN }}
-          path: tap
-      - name: Point the cask at ${{ needs.build.outputs.port }}
-        if: env.HAVE_TAP_TOKEN == 'true'
-        working-directory: tap
-        run: |
-          set -euo pipefail
-          ../src/Mac/scripts/update-cask.sh Casks/7zip-macos.rb "$PORT" "$UPSTREAM" "$SHA256"
-          if git diff --quiet; then
-            echo "::notice::The cask already points at $PORT."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "7zip-macos $PORT (7-Zip $UPSTREAM)"
-          git push
-          echo "### Homebrew cask 7zip-macos -> $PORT" >>"$GITHUB_STEP_SUMMARY"

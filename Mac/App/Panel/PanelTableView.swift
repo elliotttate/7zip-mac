@@ -417,8 +417,9 @@ final class PanelRowView: NSTableRowView {
     var highlightRect: NSRect {
         guard panel != nil else { return bounds }
         guard let span = labelSpan else { return Settings.fullRow ? bounds : .zero }
-        let end = Settings.fullRow ? bounds.maxX : span.textEnd
-        return NSRect(x: span.start, y: bounds.minY, width: max(0, end - span.start), height: bounds.height)
+        let start = Settings.fullRow ? bounds.minX + 6 : span.start
+        let end = Settings.fullRow ? bounds.maxX - 6 : span.textEnd
+        return NSRect(x: start, y: bounds.minY + 2, width: max(0, end - start), height: bounds.height - 4)
     }
 
     override func drawSelection(in dirtyRect: NSRect) {
@@ -434,13 +435,7 @@ final class PanelRowView: NSTableRowView {
 
     private func fillHighlight() {
         PanelSelectionStyle.highlight.setFill()
-        if Settings.fullRow, let column = nameColumnRect, column.minX > bounds.minX {
-            // The name column was dragged away from the left: the columns before it are filled too.
-            NSRect(x: bounds.minX, y: bounds.minY, width: column.minX - bounds.minX, height: bounds.height).fill()
-            highlightRect.fill()
-        } else {
-            highlightRect.fill()
-        }
+        NSBezierPath(roundedRect: highlightRect, xRadius: 5, yRadius: 5).fill()
     }
 
     /// The list control's dotted focus rectangle around the focused item, selected or not, while

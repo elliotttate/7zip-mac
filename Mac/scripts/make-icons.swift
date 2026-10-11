@@ -4,8 +4,7 @@
 //
 //     swift Mac/scripts/make-icons.swift <icons-manifest.json> <png-dir> --contact-sheet <png>
 //
-// Nothing is drawn here any more.  The app icon (winmatch) and the document icons (docicons) are
-// the upstream Windows .ico frames, enlarged nearest-neighbour by make-icons.py; this script only
+// make-native-icons.swift draws the original app and document artwork. This script
 // lays the finished 128 px PNGs out on a labelled checkerboard for the reports.
 
 import AppKit
@@ -106,7 +105,7 @@ func drawContactSheet(_ m: Manifest, pngDir: String, to out: String) {
     ctx.fill(CGRect(x: 0, y: 0, width: W, height: H))
 
     withAppKit(ctx) {
-        let title = "7-Zip.app icon assets -- every icon at 128pt (.ico frames enlarged nearest-neighbour), on a checkerboard"
+        let title = "7-Zip.app icon assets -- every icon at 128pt (original macOS vector artwork), on a checkerboard"
         drawLabel(ctx, title, in: CGRect(x: 0, y: H - 46, width: W, height: 32),
                   colour: CGColor(srgbRed: 0.85, green: 0.85, blue: 0.86, alpha: 1),
                   padding: 24, maxHeightFraction: 0.60)

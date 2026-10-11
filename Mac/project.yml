@@ -822,6 +822,7 @@ targets:
       - path: App/Support/Settings.swift
       - path: App/Support/WinChrome.swift
       - path: App/Panel/PanelArchiveIcons.swift
+      - path: Resources/Assets.xcassets
       - path: App/Panel/PanelListFont.swift
       - path: App/Integration/QuickLookPreferences.swift
       # The 27 upstream .ico files PanelArchiveIcons draws from (112 KB), so the sandboxed

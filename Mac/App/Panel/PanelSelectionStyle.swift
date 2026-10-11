@@ -28,7 +28,7 @@ import Cocoa
 enum PanelSelectionStyle {
 
     /// COLOR_HIGHLIGHT on Windows 11, measured in every capture (selcolors.md §2).
-    static let highlight = NSColor(srgbRed: 0, green: 120 / 255, blue: 212 / 255, alpha: 1)
+    static let highlight = NSColor.selectedContentBackgroundColor
     /// COLOR_HIGHLIGHTTEXT.
     static let highlightText = NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     /// The XOR focus rectangle over the highlight.
@@ -57,23 +57,16 @@ enum PanelSelectionStyle {
 
     /// ILD_BLEND50 with the highlight: the icon's opaque pixels half icon, half highlight.
     static func blended(_ image: NSImage) -> NSImage {
-        let result = NSImage(size: image.size, flipped: false) { rect in
-            image.draw(in: rect)
-            highlight.withAlphaComponent(0.5).setFill()
-            rect.fill(using: .sourceAtop)
-            return true
-        }
-        result.accessibilityDescription = image.accessibilityDescription
-        return result
+        image
     }
 
     /// A dotted 1 px focus rectangle (DrawFocusRect) just inside `rect`.
     static func drawFocusRectangle(_ rect: NSRect, onHighlight: Bool) {
+        guard !onHighlight else { return }
         guard rect.width > 2, rect.height > 2 else { return }
-        let path = NSBezierPath(rect: rect.insetBy(dx: 0.5, dy: 0.5))
+        let path = NSBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 1), xRadius: 5, yRadius: 5)
         path.lineWidth = 1
-        path.setLineDash([1, 1], count: 2, phase: 0)
-        (onHighlight ? focusOnHighlight : focusOnBackground).setStroke()
+        NSColor.keyboardFocusIndicatorColor.withAlphaComponent(0.6).setStroke()
         path.stroke()
     }
 }

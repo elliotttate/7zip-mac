@@ -1,17 +1,17 @@
 #!/bin/sh
-# make-icons.sh -- regenerate every icon asset of 7-Zip.app from the upstream Windows resources.
+# make-icons.sh -- regenerate the original native macOS artwork (CC0).
 #
 # The assets under Mac/Resources/Assets.xcassets and Mac/Resources/Icons are *generated*, never
 # hand-edited: run this after touching the generator or the association table and commit the
 # result.  See ai/api/icons.md for the naming scheme and the extension -> icon mapping.
 #
 #   Mac/scripts/make-icons.sh                 extract, draw, assemble, contact sheet, verify
-#                                             ("draw" draws nothing: it enlarges .ico frames
-#                                             nearest-neighbour by integer factors)
+#                                             (the Swift vector renderer draws every size independently)
 #   Mac/scripts/make-icons.sh --stage draw    one stage only (extract|draw|assemble|sheet|verify)
 #   Mac/scripts/make-icons.sh --dump 7z       ASCII-dump one upstream .ico
 #
-# Inputs  (read-only, never modified):
+# Original artwork: Mac/scripts/make-native-icons.swift; license: Resources/Icons/LICENSE.md.
+# Inputs  (read-only, never modified; upstream metadata and legacy resources):
 #   CPP/7zip/Archive/Icons/*.ico              27 per-format icons
 #   CPP/7zip/UI/FileManager/FM.ico            the File Manager's own icon (the "7z" mark)
 #   CPP/7zip/UI/FileManager/7zipLogo.ico      the About-box wordmark
@@ -23,8 +23,7 @@
 #   Mac/Resources/Assets.xcassets/AppIcon.appiconset/      10 slots, 7 distinct pixel sizes
 #   Mac/Resources/Assets.xcassets/doc-<name>.imageset/      27 image sets (mac 1x/2x)
 #   Mac/Resources/Icons/doc-<name>.icns                     27 format .icns + doc-fm.icns, 16..1024;
-#                                                           the verify stage fails unless every size
-#                                                           is an .ico frame enlarged x1..x32
+#                                                           the verify stage checks every PNG and packaged slot
 #   Mac/build/screenshots/icons-contact-sheet.png    every icon at 128pt on a checkerboard
 #   Mac/build/icons/                                        scratch: decoded frames, manifest, PNGs
 set -eu

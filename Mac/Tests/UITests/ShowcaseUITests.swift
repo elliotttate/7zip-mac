@@ -14,6 +14,29 @@ final class ShowcaseUITests: SevenZipUITestCase {
 
     private static let demo = "/Users/Shared/7-Zip Demo"
 
+    func testNativeMacWindows() throws {
+        let flag = (TestPaths.repoRoot ?? "/nonexistent") + "/Mac/build/showcase/RUN"
+        guard FileManager.default.fileExists(atPath: flag),
+              FileManager.default.fileExists(atPath: Self.demo + "/Project backup.7z") else {
+            throw XCTSkip("native previews are opt-in and require the showcase fixture")
+        }
+        for theme in ["light", "dark"] {
+            launch(seed: .typed([
+                SettingsDomain.Key.panelPath0: Self.demo,
+                SettingsDomain.Key.position: "{{100, 100}, {1040, 612}}",
+                SettingsDomain.Key.fullRow: true,
+                "FM.Theme": theme,
+                "FM.Toolbars": 12,
+            ]))
+            let panel = sevenZip.panel(0)
+            XCTAssertTrue(panel.waitForRow(named: "Project backup.7z"))
+            panel.select("Project backup.7z")
+            app.activate()
+            XCTAssertTrue(sevenZip.toolbar.exists)
+            screenshot("native-macos-" + theme)
+        }
+    }
+
     func testContextMenuImage() throws {
         let flag = (TestPaths.repoRoot ?? "/nonexistent") + "/Mac/build/showcase/RUN"
         guard ProcessInfo.processInfo.environment["SEVENZIP_SHOWCASE"] == "1"

@@ -190,14 +190,14 @@ final class OptionsWindowController: NSWindowController, NSWindowDelegate, NSTab
     // sffont: the horizontal metrics are stretched by DLU.scaleX with the pages (316 DLU wide), so
     // a wider dialog font keeps Windows' proportions; at scale 1 they are the pixels above.
     static var pageWidth: CGFloat { DLU.x(316) }
-    static var clientSize: NSSize { NSSize(width: pageWidth + 20, height: 550) }
-    static var tabControlRect: NSRect { NSRect(x: 6, y: 7, width: pageWidth + 8, height: 507) }
-    static var pageRect: NSRect { NSRect(x: 10, y: 29, width: pageWidth, height: 481) }
+    static var clientSize: NSSize { NSSize(width: pageWidth + 40, height: DLU.y(296) + 118) }
+    static var tabControlRect: NSRect { NSRect(x: 20, y: 18, width: pageWidth, height: 30) }
+    static var pageRect: NSRect { NSRect(x: 20, y: 64, width: pageWidth, height: DLU.y(296)) }
     static var pageSize: NSSize { pageRect.size }
     /// The four 50 x 14 DLU buttons, 4 DLU apart, the last 4 DLU from the right edge.
     private static func buttonRect(_ fromRight: Int) -> NSRect {
         let w = DLU.x(50), gap = DLU.x(4)
-        return NSRect(x: clientSize.width - gap - w - CGFloat(fromRight) * (w + gap), y: 520, width: w, height: 23)
+        return NSRect(x: clientSize.width - gap - w - CGFloat(fromRight) * (w + gap), y: clientSize.height - 40, width: w, height: 28)
     }
     static var okRect: NSRect { buttonRect(3) }          // IDOK
     static var cancelRect: NSRect { buttonRect(2) }      // IDCANCEL
